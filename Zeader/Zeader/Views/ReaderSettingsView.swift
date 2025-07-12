@@ -9,16 +9,14 @@ struct ReaderSettingsView: View {
             Form {
                 Section("Appearance") {
                     // Theme Selection
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 16) {
                         Text("Theme")
                             .font(.headline)
                         
                         LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 12) {
+                            GridItem(.flexible(), spacing: 16),
+                            GridItem(.flexible(), spacing: 16)
+                        ], spacing: 16) {
                             ForEach(ReaderTheme.allCases, id: \.self) { theme in
                                 ThemePreviewButton(
                                     theme: theme,
@@ -29,11 +27,13 @@ struct ReaderSettingsView: View {
                                 }
                             }
                         }
+                        .padding(.horizontal, 8)
                     }
                     
                     // Brightness
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Brightness")
+                            .font(.subheadline)
                         Slider(value: $settings.brightness, in: 0.3...1.0, step: 0.1)
                             .onChange(of: settings.brightness) { _ in
                                 settings.updateSettings()
@@ -53,8 +53,9 @@ struct ReaderSettingsView: View {
                     }
                     
                     // Font Size
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Font Size: \(Int(settings.fontSize))pt")
+                            .font(.subheadline)
                         Slider(value: $settings.fontSize, in: 12...28, step: 1)
                             .onChange(of: settings.fontSize) { _ in
                                 settings.updateSettings()
@@ -62,8 +63,9 @@ struct ReaderSettingsView: View {
                     }
                     
                     // Line Height
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Line Spacing: \(settings.lineHeight, specifier: "%.1f")")
+                            .font(.subheadline)
                         Slider(value: $settings.lineHeight, in: 1.0...2.5, step: 0.1)
                             .onChange(of: settings.lineHeight) { _ in
                                 settings.updateSettings()
@@ -71,8 +73,9 @@ struct ReaderSettingsView: View {
                     }
                     
                     // Margin
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Margin: \(Int(settings.margin))px")
+                            .font(.subheadline)
                         Slider(value: $settings.margin, in: 10...40, step: 5)
                             .onChange(of: settings.margin) { _ in
                                 settings.updateSettings()
@@ -115,31 +118,47 @@ struct ThemePreviewButton: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                RoundedRectangle(cornerRadius: 8)
+            VStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 12)
                     .fill(theme.backgroundColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(isSelected ? Color.blue : Color.gray.opacity(0.3), lineWidth: isSelected ? 2 : 1)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isSelected ? Color.blue : Color.gray.opacity(0.3), lineWidth: isSelected ? 3 : 1)
                     )
                     .overlay(
-                        VStack(spacing: 2) {
+                        VStack(spacing: 6) {
                             Text("Aa")
-                                .font(.caption)
+                                .font(.title2)
+                                .fontWeight(.medium)
                                 .foregroundColor(theme.textColor)
-                            Rectangle()
-                                .fill(theme.textColor)
-                                .frame(height: 1)
-                                .frame(maxWidth: 20)
+                            
+                            VStack(spacing: 2) {
+                                Rectangle()
+                                    .fill(theme.textColor)
+                                    .frame(height: 2)
+                                    .frame(maxWidth: 40)
+                                Rectangle()
+                                    .fill(theme.textColor.opacity(0.7))
+                                    .frame(height: 2)
+                                    .frame(maxWidth: 30)
+                                Rectangle()
+                                    .fill(theme.textColor.opacity(0.5))
+                                    .frame(height: 2)
+                                    .frame(maxWidth: 35)
+                            }
                         }
+                        .padding(16)
                     )
-                    .frame(height: 50)
+                    .frame(height: 80)
                 
                 Text(theme.rawValue)
-                    .font(.caption2)
+                    .font(.caption)
+                    .fontWeight(isSelected ? .semibold : .regular)
                     .foregroundColor(isSelected ? .blue : .primary)
             }
         }
         .buttonStyle(PlainButtonStyle())
+        .scaleEffect(isSelected ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 } 

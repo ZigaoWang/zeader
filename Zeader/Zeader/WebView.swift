@@ -21,19 +21,23 @@ struct WebView: UIViewRepresentable {
         
         // Store reference for updates
         context.coordinator.webView = webView
+        context.coordinator.settings = settings
         
         return webView
     }
     
     func updateUIView(_ uiView: WKWebView, context: Context) {
+        context.coordinator.settings = settings
+        
         // Only reload if URL changed
         if context.coordinator.lastURL != url {
             uiView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
             context.coordinator.lastURL = url
+            context.coordinator.isPageLoaded = false
+        } else {
+            // Same page, just update styles
+            context.coordinator.applyStyles()
         }
-        
-        // Always update CSS when settings change
-        context.coordinator.applyStyles(settings: settings)
     }
     
     func makeCoordinator() -> Coordinator {
@@ -43,53 +47,64 @@ struct WebView: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate {
         var webView: WKWebView?
         var lastURL: URL?
-        private var isPageLoaded = false
+        var isPageLoaded = false
+        var settings: ReaderSettings?
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             isPageLoaded = true
-            // Apply styles after page loads
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                if let settings = self.getCurrentSettings() {
-                    self.applyStyles(settings: settings)
-                }
+            // Apply styles immediately after page loads
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.applyStyles()
             }
         }
         
-        func applyStyles(settings: ReaderSettings) {
-            guard let webView = webView, isPageLoaded else { return }
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            isPageLoaded = false
+        }
+        
+        func applyStyles() {
+            guard let webView = webView, 
+                  let settings = settings,
+                  isPageLoaded else { return }
             
             let cssInjection = """
             (function() {
                 // Remove existing custom styles
-                var existingStyle = document.getElementById('zeader-custom-style');
-                if (existingStyle) {
-                    existingStyle.remove();
-                }
+                var existingStyles = document.querySelectorAll('#zeader-custom-style');
+                existingStyles.forEach(function(style) {
+                    style.remove();
+                });
                 
                 // Create new style element
                 var style = document.createElement('style');
                 style.id = 'zeader-custom-style';
-                style.innerHTML = `\(settings.cssString)`;
+                style.type = 'text/css';
+                style.innerHTML = `\(settings.cssString.replacingOccurrences(of: "`", with: "\\`"))`;
                 document.head.appendChild(style);
                 
-                // Force repaint
-                document.body.style.display = 'none';
+                // Apply styles to body immediately
+                document.body.style.fontFamily = '\(settings.fontFamily), serif';
+                document.body.style.fontSize = '\(settings.fontSize)px';
+                document.body.style.lineHeight = '\(settings.lineHeight)';
+                document.body.style.color = '\(settings.theme.textHex)';
+                document.body.style.backgroundColor = '\(settings.theme.backgroundHex)';
+                document.body.style.margin = '0';
+                document.body.style.padding = '\(settings.margin)px';
+                
+                // Force style recalculation
                 document.body.offsetHeight;
-                document.body.style.display = 'block';
+                
+                console.log('Zeader styles applied');
             })();
             """
             
             webView.evaluateJavaScript(cssInjection) { result, error in
                 if let error = error {
                     print("CSS injection error: \(error)")
+                } else {
+                    print("CSS applied successfully")
                 }
             }
-        }
-        
-        private func getCurrentSettings() -> ReaderSettings? {
-            // This is a workaround since we can't directly access settings from coordinator
-            // The updateUIView will call applyStyles with the current settings
-            return nil
         }
     }
 }
@@ -103,18 +118,22 @@ struct WebView: NSViewRepresentable {
         let webView = WKWebView()
         webView.navigationDelegate = context.coordinator
         context.coordinator.webView = webView
+        context.coordinator.settings = settings
         return webView
     }
     
     func updateNSView(_ nsView: WKWebView, context: Context) {
+        context.coordinator.settings = settings
+        
         // Only reload if URL changed
         if context.coordinator.lastURL != url {
             nsView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
             context.coordinator.lastURL = url
+            context.coordinator.isPageLoaded = false
+        } else {
+            // Same page, just update styles
+            context.coordinator.applyStyles()
         }
-        
-        // Always update CSS when settings change
-        context.coordinator.applyStyles(settings: settings)
     }
     
     func makeCoordinator() -> Coordinator {
@@ -124,51 +143,64 @@ struct WebView: NSViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate {
         var webView: WKWebView?
         var lastURL: URL?
-        private var isPageLoaded = false
+        var isPageLoaded = false
+        var settings: ReaderSettings?
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             isPageLoaded = true
-            // Apply styles after page loads
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                if let settings = self.getCurrentSettings() {
-                    self.applyStyles(settings: settings)
-                }
+            // Apply styles immediately after page loads
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.applyStyles()
             }
         }
         
-        func applyStyles(settings: ReaderSettings) {
-            guard let webView = webView, isPageLoaded else { return }
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            isPageLoaded = false
+        }
+        
+        func applyStyles() {
+            guard let webView = webView, 
+                  let settings = settings,
+                  isPageLoaded else { return }
             
             let cssInjection = """
             (function() {
                 // Remove existing custom styles
-                var existingStyle = document.getElementById('zeader-custom-style');
-                if (existingStyle) {
-                    existingStyle.remove();
-                }
+                var existingStyles = document.querySelectorAll('#zeader-custom-style');
+                existingStyles.forEach(function(style) {
+                    style.remove();
+                });
                 
                 // Create new style element
                 var style = document.createElement('style');
                 style.id = 'zeader-custom-style';
-                style.innerHTML = `\(settings.cssString)`;
+                style.type = 'text/css';
+                style.innerHTML = `\(settings.cssString.replacingOccurrences(of: "`", with: "\\`"))`;
                 document.head.appendChild(style);
                 
-                // Force repaint
-                document.body.style.display = 'none';
+                // Apply styles to body immediately
+                document.body.style.fontFamily = '\(settings.fontFamily), serif';
+                document.body.style.fontSize = '\(settings.fontSize)px';
+                document.body.style.lineHeight = '\(settings.lineHeight)';
+                document.body.style.color = '\(settings.theme.textHex)';
+                document.body.style.backgroundColor = '\(settings.theme.backgroundHex)';
+                document.body.style.margin = '0';
+                document.body.style.padding = '\(settings.margin)px';
+                
+                // Force style recalculation
                 document.body.offsetHeight;
-                document.body.style.display = 'block';
+                
+                console.log('Zeader styles applied');
             })();
             """
             
             webView.evaluateJavaScript(cssInjection) { result, error in
                 if let error = error {
                     print("CSS injection error: \(error)")
+                } else {
+                    print("CSS applied successfully")
                 }
             }
-        }
-        
-        private func getCurrentSettings() -> ReaderSettings? {
-            return nil
         }
     }
 }
