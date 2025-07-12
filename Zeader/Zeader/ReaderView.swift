@@ -2,32 +2,22 @@ import SwiftUI
 
 struct ReaderView: View {
     @ObservedObject var document: EPUBDocument
-
+    @ObservedObject var settings: ReaderSettings
+    
     var body: some View {
-        VStack(spacing: 0) {
-            WebView(url: document.currentChapterURL)
-            HStack {
-                Button(action: {
-                    document.previousChapter()
-                }) {
-                    Image(systemName: "chevron.left")
-                }
-                .disabled(!document.hasPrevious)
-
-                Text(document.currentChapterTitle)
-                    .font(.headline)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity)
-
-                Button(action: {
-                    document.nextChapter()
-                }) {
-                    Image(systemName: "chevron.right")
-                }
-                .disabled(!document.hasNext)
-            }
-            .padding()
-        }
+        WebView(url: document.currentChapterURL, settings: settings)
+            .gesture(
+                DragGesture()
+                    .onEnded { value in
+                        // Swipe right to go to previous chapter
+                        if value.translation.width > 100 && abs(value.translation.height) < 50 {
+                            document.previousChapter()
+                        }
+                        // Swipe left to go to next chapter
+                        else if value.translation.width < -100 && abs(value.translation.height) < 50 {
+                            document.nextChapter()
+                        }
+                    }
+            )
     }
 } 
